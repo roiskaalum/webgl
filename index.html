@@ -27,12 +27,14 @@
                 <input type="checkbox" id="subdivision-checkbox" onchange="InitShaders();">
             </div>
             <div class="subdivisions-options-item">
-                <label>Subdivisions:</label>
-                <input type="number" id="subdivision-level" value="1" min="1" onchange="InitShaders();">
-            </div>
-            <div class="subdivisions-options-item">
-                <label>Checkerboard?</label>
-                <input type="checkbox" id="checkerboard" onchange="InitShaders();">
+                <div class="subdivisions-options-item-child">
+                    <label>Subdivisions:</label>
+                    <input type="number" id="subdivision-level" value="1" min="1" onchange="InitShaders();">
+                </div>
+                <div class="subdivisions-options-item-child">
+                    <label>Checkerboard?</label>
+                    <input type="checkbox" id="checkerboard" onchange="InitShaders();">
+                </div>
             </div>
         </div>
         <div class="colors-container" id="colors-container"></div>

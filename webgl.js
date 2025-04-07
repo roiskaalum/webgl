@@ -18,8 +18,8 @@ document.getElementById('gl').addEventListener('mousemove', function(e)
 {
     if(e.buttons == 1)
     {
-        angle[0] -= (mouseY - e.y) * 0.1;
-        angle[1] -= (mouseX - e.x) * 0.1;
+        angle[0] -= (mouseY - e.y) * 0.01;
+        angle[1] -= (mouseX - e.x) * 0.01;
         gl.uniform4fv(angleGL, new Float32Array(angle));
         Render();
     }
@@ -139,7 +139,7 @@ function CreateGeometryBuffers(program)
 
     vertices = [];
 
-    CreateGeomtryUI();
+    CreateGeometryUI();
 
     CreateVBO(program, new Float32Array(vertices))
 
@@ -150,7 +150,7 @@ function CreateGeometryBuffers(program)
     Render();
 }
 
-function CreateGeomtryUI() {
+function CreateGeometryUI() {
     const ew = document.getElementById("w");
     const w = ew ? ew.value : 1.0;
     const eh = document.getElementById("h");
@@ -161,8 +161,10 @@ function CreateGeomtryUI() {
 
     const subdivisionOptions = document.getElementsByClassName("subdivision-options")[0];
     if(!subdivisionOptions.classList.contains("hidden"))
+    {
         subdivisionOptions.classList.add("hidden");
-
+    }
+    
     switch(e.selectedIndex)
     {
         case 0:
@@ -178,9 +180,16 @@ function CreateGeomtryUI() {
         case 2:
             CreateColorElements(6);
             colors = GetRGBValuesFromHTMLByClassName("color", 6);
-            CreateCube(w, h, d, colors); subdivisionOptions.classList.remove("hidden");
+            CreateCube(w, h, d, colors);
+            subdivisionOptions.classList.remove("hidden");
+            subdivisionOptions.children[0].classList.remove("hidden");
+            if(document.getElementById("subdivision-checkbox").checked)
+                subdivisionOptions.children[1].classList.remove("hidden");
+            else
+                subdivisionOptions.children[1].classList.add("hidden");
             break;
     }
+    
 
     let html = `
     <div class="geometry-ui-item">
@@ -190,7 +199,7 @@ function CreateGeomtryUI() {
         <label>Height: </label><input type="number" id="h" value = "${h}" onchange="InitShaders();">
     </div>
     `;
-    if(e.selectedIndex == 3)
+    if(e.selectedIndex == 2)
     {
         html += `
             <div class="geometry-ui-item">
@@ -200,9 +209,6 @@ function CreateGeomtryUI() {
         `;
     }
     document.getElementById("ui").innerHTML = html;
-    const doSubvision = document.getElementById("subdivision-checkbox").checked;
-    if(doSubvision)
-        geometry = SubdivideGeomtry(geometry);
 }
 
 function CreateVBO(program, vert)
@@ -416,8 +422,9 @@ function CreateCube(width, height, depth, colors)
     const w = width * 0.5;
     const h = height * 0.5;
     const d = depth * 0.5;
-
-    const subdivisions = parseInt(document.getElementById("subdivision-level")?.value || "1");
+    let subdivisions = 1;
+    if(document.getElementById("subdivision-checkbox").checked)
+        subdivisions = parseInt(document.getElementById("subdivision-level")?.value || "1");
 
     // Front (+Z)
     AddSubdividedQuad(
@@ -549,8 +556,6 @@ function HexToRGB(hex)
 function GetRGBValuesFromHTMLByClassName(className, numberOfFacesOrPoints)
 {
     const colorHTML = document.getElementsByClassName(className);
-    console.log("Color HTML: ", colorHTML);
-    console.log("Number of faces or points: ", numberOfFacesOrPoints);
     const colors = [];
     if(!colorHTML || colorHTML.length == 0 || colorHTML === undefined)
     {
@@ -574,7 +579,6 @@ function GetRGBValuesFromHTMLByClassName(className, numberOfFacesOrPoints)
             colors.push([1.0, 1.0, 1.0]);
         }
     }
-    console.log("Colors: ", colors);
     return colors;
 }
 
@@ -587,7 +591,6 @@ function CreateColorElements(numberOfColorElements)
             stringArrOfPreferredColors.push(e.value);
         });
     } catch(e) {
-        console.log("Creating new color elements");
     }
 
     const colorsContainer = document.getElementById("colors-container");
@@ -597,7 +600,6 @@ function CreateColorElements(numberOfColorElements)
        colorsContainer.childElementCount < numberOfColorElements)
     {
         offset = colorsContainer.childElementCount;
-        console.log("Offset: ", offset);
     }
     else if(colorsContainer.childElementCount > numberOfColorElements)
     {
@@ -612,17 +614,11 @@ function CreateColorElements(numberOfColorElements)
 
     if(numberOfColorElements == colorsContainer.childElementCount)
     {
-        console.log("Already created colors container");
         return;
     }
 
     for(let i = offset; i < numberOfColorElements; i++)
     {
-        console.log("number of color elements: ", numberOfColorElements);
-        console.log("i: ", i);
-        console.log("Child element Count: ", colorsContainer.childElementCount);
-        console.log("Creating color item: ", i + 1);
-
         const div = document.createElement("div");
         div.classList.add("color-item");
         const label = document.createElement("label");
