@@ -1,0 +1,3 @@
+Hvordan går man fra hardcoded trekant til en mere dynamisk løsning:
+- Definer funktioner der kan udregne shapes ud fra længder og centrum, etc.
+- Derfra udarbejd vektorer ud fra det.

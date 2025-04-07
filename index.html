@@ -12,30 +12,75 @@
     </header>
     <main>
         <canvas id="gl" width="800px" height="600px">WebGL is not supported!</canvas>
-        <label>Vertex Shader:</label>
-        <textarea id="vs" spellcheck="false">
-            precision mediump float;
-            attribute vec3 Pos;
-            attribute vec3 Color;
-            varying vec3 vertexColor;
-            void main()
-            {
-                gl_Position = vec4(Pos, 1.0);
-                vertexColor = Color;
-            }
-        </textarea>
-        <label>Fragment Shader:</label>
-        <textarea id="fs" spellcheck="false">
-            precision mediump float;
-            varying vec3 vertexColor;
-            void main()
-            {
-                gl_FragColor = vec4(vertexColor, 1.0);
-            }
-        </textarea>
+        <div class="select-container">
+            <label>Select Shape: </label>
+            <select id="shape" onchange="InitShaders();">
+                <option selected>Triangle</option>
+                <option>Quad</option>
+                <option>Cube</option>
+            </select>
+        </div>
+        <div id="ui" class="geomtry-ui">Generate UI for geomtry here!</div>
+        <div class="subdivision-options">
+            <div class="subdivision-options-item">
+                <label>Enable Subdivision</label>
+                <input type="checkbox" id="subdivision-checkbox" onchange="InitShaders();">
+            </div>
+            <div class="subdivisions-options-item">
+                <label>Subdivisions:</label>
+                <input type="number" id="subdivision-level" value="1" min="1" onchange="InitShaders();">
+            </div>
+            <div class="subdivisions-options-item">
+                <label>Checkerboard?</label>
+                <input type="checkbox" id="checkerboard" onchange="InitShaders();">
+            </div>
+        </div>
+        <div class="colors-container" id="colors-container"></div>
+        <div class="editing-container">
+
+            <div class="editor-item">
+                <label>Vertex Shader:</label>
+                <textarea id="vs" spellcheck="false">
+                    precision mediump float;
+                    attribute vec3 Pos;
+                    attribute vec3 Color;
+                    uniform vec4 Angle;
+                    varying vec3 vertexColor;
+                    void main()
+                    {
+                        float coX = cos(Angle.x);
+                        float siX = sin(Angle.x);
+                        mat4 matX = mat4(vec4(1.0,  0.0, 0.0, 0.0),
+                                         vec4(0.0,  coX, siX, 0.0),
+                                         vec4(0.0, -siX, coX, 0.0),
+                                         vec4(0.0,  0.0, 0.0, 1.0));
+                        float coY = cos(Angle.y);
+                        float siY = sin(Angle.y);
+                        mat4 matY = mat4(vec4(coY, 0.0, -siY, 0.0),
+                                         vec4(0.0, 1.0,  0.0, 0.0),
+                                         vec4(siY, 0.0,  coY, 0.0),
+                                         vec4(0.0, 0.0,  0.0, 1.0));
+
+                        gl_Position = matY * matX * vec4(Pos, 1.0);
+                        vertexColor = Color;
+                    }
+                </textarea>
+            </div>
+            <div class="editor-item">
+                <label>Fragment Shader:</label>
+                <textarea id="fs" spellcheck="false">
+                    precision mediump float;
+                    varying vec3 vertexColor;
+                    void main()
+                    {
+                        gl_FragColor = vec4(vertexColor, 1.0);
+                    }
+                </textarea>
+            </div>
+        </div>
     </main>
     <footer>
-        <p>&copy; 2023 WebGL Project</p>
+        <p>&copy; 2025 WebGL Project</p>
     </footer>
     <script src="webgl.js"></script>
 </body>

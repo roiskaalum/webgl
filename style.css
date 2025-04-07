@@ -1,3 +1,62 @@
 body {
     background-color: grey;
+    font-family:calibri;
+}
+textarea{
+    width:620px;
+    height: 720px;
+}
+main{
+    display:flex;
+    flex-direction:column;
+    align-items: center;
+}
+.editing-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 20px;
+    flex:1;
+}
+.editor-item{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 10px;
+    padding:2em;
+}
+.select-container {
+    padding:2em;
+}
+label{
+    color:white;
+    font-size: 20px;
+    font-weight: bold;
+}
+.geometry-ui {
+    display:flex;
+    flex-direction: column;
+    width:fit-content;
+    flex:1;
+}
+.geometry-ui-item {
+    display:flex;
+    justify-content: space-between;
+    width:100%;
+    color:white;
+}
+.geometry-ui-item>input{
+    align-self: end;
+}
+.geometry-ui-item>label{
+    align-self: start;
+}
+
+.subdivision-options {
+    display:flex;
+    flex-direction: column;
+}
+
+.hidden {
+    display: none;
 }
