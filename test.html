@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WebGL Project</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body onload="InitWebGL();">
+        <header>
+            <h1>Welcome to WebGL Project</h1>
+        </header>
+        <main>
+            <canvas id="gl" width="800px" height="600px">WebGL is not supported!</canvas>
+            <label>Vertex Shader:</label>
+            <textarea id="vs" spellcheck="false">
+                precision mediump float;
+                attribute vec3 Pos;
+                attribute vec3 Color;
+                varying vec3 vertexColor;
+                void main()
+                {
+                    gl_Position = vec4(Pos, 1.0);
+                    vertexColor = Color;
+                }
+            </textarea>
+            <label>Fragment Shader:</label>
+            <textarea id="fs" spellcheck="false" >
+                precision mediump float;
+                varying vec3 vertexColor;
+                void main()
+                {
+                    gl_FragColor = vec4(vertexColor, 1.0);
+                }
+            </textarea>
+        </main>
+        <footer>
+            <p>&copy; 2023 WebGL Project</p>
+        </footer>
+        <script src="webgl.js"></script>
+    </body>
+</html>
