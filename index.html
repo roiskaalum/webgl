@@ -37,6 +37,9 @@
                 </div>
             </div>
         </div>
+        <div class="texture-container">
+            <input type="checkbox" id="texture" onchange="Update();"><span>Show Texture</span>
+        </div>
         <div class="colors-container" id="colors-container"></div>
         <div class="editing-container">
 
@@ -46,8 +49,10 @@
                     precision mediump float;
                     attribute vec3 Pos;
                     attribute vec3 Color;
+                    attribute vec2 UV;
                     uniform vec4 Angle;
                     varying vec3 vertexColor;
+                    varying vec2 uv;
                     void main()
                     {
                         float coX = cos(Angle.x);
@@ -65,6 +70,7 @@
 
                         gl_Position = matY * matX * vec4(Pos, 1.0);
                         vertexColor = Color;
+                        uv = UV;
                     }
                 </textarea>
             </div>
@@ -72,10 +78,16 @@
                 <label>Fragment Shader:</label>
                 <textarea id="fs" spellcheck="false">
                     precision mediump float;
+                    uniform sampler2D Texture;
+                    uniform vec4 Display;
                     varying vec3 vertexColor;
+                    varying vec2 uv;
                     void main()
                     {
-                        gl_FragColor = vec4(vertexColor, 1.0);
+                        float p = abs(Display.w);
+                        vec3 texture = texture2D(Texture, uv).rgb;
+                        vec3 color = vertexColor;
+                        gl_FragColor = vec4(mix(color, texture, p), 1.0);
                     }
                 </textarea>
             </div>
