@@ -45,51 +45,11 @@
 
             <div class="editor-item">
                 <label>Vertex Shader:</label>
-                <textarea id="vs" spellcheck="false">
-                    precision mediump float;
-                    attribute vec3 Pos;
-                    attribute vec3 Color;
-                    attribute vec2 UV;
-                    uniform vec4 Angle;
-                    varying vec3 vertexColor;
-                    varying vec2 uv;
-                    void main()
-                    {
-                        float coX = cos(Angle.x);
-                        float siX = sin(Angle.x);
-                        mat4 matX = mat4(vec4(1.0,  0.0, 0.0, 0.0),
-                                         vec4(0.0,  coX, siX, 0.0),
-                                         vec4(0.0, -siX, coX, 0.0),
-                                         vec4(0.0,  0.0, 0.0, 1.0));
-                        float coY = cos(Angle.y);
-                        float siY = sin(Angle.y);
-                        mat4 matY = mat4(vec4(coY, 0.0, -siY, 0.0),
-                                         vec4(0.0, 1.0,  0.0, 0.0),
-                                         vec4(siY, 0.0,  coY, 0.0),
-                                         vec4(0.0, 0.0,  0.0, 1.0));
-
-                        gl_Position = matY * matX * vec4(Pos, 1.0);
-                        vertexColor = Color;
-                        uv = UV;
-                    }
-                </textarea>
+                <textarea id="vs" spellcheck="false"></textarea>
             </div>
             <div class="editor-item">
                 <label>Fragment Shader:</label>
-                <textarea id="fs" spellcheck="false">
-                    precision mediump float;
-                    uniform sampler2D Texture;
-                    uniform vec4 Display;
-                    varying vec3 vertexColor;
-                    varying vec2 uv;
-                    void main()
-                    {
-                        float p = abs(Display.w);
-                        vec3 texture = texture2D(Texture, uv).rgb;
-                        vec3 color = vertexColor;
-                        gl_FragColor = vec4(mix(color, texture, p), 1.0);
-                    }
-                </textarea>
+                <textarea id="fs" spellcheck="false"></textarea>
             </div>
         </div>
     </main>

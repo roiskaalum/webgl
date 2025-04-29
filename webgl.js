@@ -36,30 +36,79 @@ var displayGL = 0;
 function InitWebGL()
 {
     if(!gl)
-    {
-        alert('WebGL is not supported');
-        return;
-    }
-    let canvas = document.getElementById('gl');
-    if(canvas.width != canvas.clientWidth ||
-       canvas.height != canvas.clientHeight)
+        {
+            alert('WebGL is not supported');
+            return;
+        }
+        let canvas = document.getElementById('gl');
+        if(canvas.width != canvas.clientWidth ||
+            canvas.height != canvas.clientHeight)
     {
         canvas.width  = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
     }
+    
     InitViewport(canvas);
 }
 
 function InitViewport()
 {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
+    
     gl.clearColor(0.0, 0.4, 0.6, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
-
+    
+    
     InitShaders();
+}
+
+function InitHTMLShaders()
+{
+    //Vertex Shader Content:
+    document.getElementById("vs").innerHTML = 
+`precision mediump float;
+attribute vec3 Pos;
+attribute vec3 Color;
+attribute vec2 UV;
+uniform vec4 Angle;
+varying vec3 vertexColor;
+varying vec2 uv;
+void main()
+{
+    float coX = cos(Angle.x);
+    float siX = sin(Angle.x);
+    mat4 matX = mat4(vec4(1.0,  0.0, 0.0, 0.0),
+                        vec4(0.0,  coX, siX, 0.0),
+                        vec4(0.0, -siX, coX, 0.0),
+                        vec4(0.0,  0.0, 0.0, 1.0));
+    float coY = cos(Angle.y);
+    float siY = sin(Angle.y);
+    mat4 matY = mat4(vec4(coY, 0.0, -siY, 0.0),
+                        vec4(0.0, 1.0,  0.0, 0.0),
+                        vec4(siY, 0.0,  coY, 0.0),
+                        vec4(0.0, 0.0,  0.0, 1.0));
+
+    gl_Position = matY * matX * vec4(Pos, 1.0);
+    vertexColor = Color;
+    uv = UV;
+}`;
+
+    //Fragment Shader Content:
+    document.getElementById("fs").innerHTML = 
+`precision mediump float;
+uniform sampler2D Texture;
+uniform vec4 Display;
+varying vec3 vertexColor;
+varying vec2 uv;
+void main()
+{
+    float p = abs(Display.w);
+    vec3 texture = texture2D(Texture, uv).rgb;
+    vec3 color = vertexColor;
+    gl_FragColor = vec4(mix(color, texture, p), 1.0);
+}`;
 }
 
 function InitVertexShader()
@@ -79,6 +128,7 @@ function InitVertexShader()
 
 function InitShaders()
 {
+    InitHTMLShaders();
     const vs = InitVertexShader();
     const fs = InitFragmentShader();
 
@@ -377,12 +427,18 @@ function AddSubdividedQuad(v1, v2, v3, v4, baseColor, divisions = 1) {
                     color[k] = baseColor[k] * (1 - fade);
                 }
             }
+            // Calculate UV coordinates for the sub-quad.
+
+            const uStart = j / divisions;
+            const uEnd = (j + 1) / divisions;
+            const vStart = (divisions - i) / divisions; // Top edge
+            const vEnd = (divisions - (i + 1)) / divisions; // Bottom edge
 
             AddQuad(
-                    p1[0], p1[1], p1[2], color[0], color[1], color[2],
-                    p2[0], p2[1], p2[2], color[0], color[1], color[2],
-                    p3[0], p3[1], p3[2], color[0], color[1], color[2],
-                    p4[0], p4[1], p4[2], color[0], color[1], color[2]
+                p1[0], p1[1], p1[2], ...color, uStart, vStart,
+                p2[0], p2[1], p2[2], ...color, uStart, vEnd,
+                p3[0], p3[1], p3[2], ...color, uEnd, vEnd,
+                p4[0], p4[1], p4[2], ...color, uEnd, vStart
             );
 
             // Create a color offset based on i and j to slightly vary the base color
@@ -432,72 +488,71 @@ function CreateQuad(width, height, colors)
              w, h, 0.0, ...colors[3], 1.0, 1.0);
 }
 
-function CreateCube(width, height, depth, colors)
-{
+function CreateCube(width, height, depth, colors) {
     vertices.length = 0;
     const w = width * 0.5;
     const h = height * 0.5;
     const d = depth * 0.5;
     let subdivisions = 1;
-    if(document.getElementById("subdivision-checkbox").checked)
+    if (document.getElementById("subdivision-checkbox").checked)
         subdivisions = parseInt(document.getElementById("subdivision-level")?.value || "1");
 
     // Front (+Z)
     AddSubdividedQuad(
-        [-w, -h,  d],
-        [ w, -h,  d],
-        [ w,  h,  d],
-        [-w,  h,  d],
+        [-w,  h, d], // Top-left
+        [-w, -h, d], // Bottom-left
+        [ w, -h, d], // Bottom-right
+        [ w,  h, d], // Top-right
         colors[0],
         subdivisions
     );
 
     // Back (-Z)
     AddSubdividedQuad(
-        [ w, -h, -d],
-        [-w, -h, -d],
-        [-w,  h, -d],
-        [ w,  h, -d],
+        [ w,  h, -d], // Top-left
+        [ w, -h, -d], // Top-right
+        [-w, -h, -d], // Bottom-right
+        [-w,  h, -d], // Bottom-left
         colors[1],
         subdivisions
     );
 
     // Top (+Y)
     AddSubdividedQuad(
-        [-w,  h,  d],
-        [ w,  h,  d],
-        [ w,  h, -d],
-        [-w,  h, -d],
+        [-w,  h, -d], // Top-left
+        [-w,  h,  d], // Bottom-left
+        [ w,  h,  d], // Bottom-right
+        [ w,  h, -d], // Top-right
         colors[2],
         subdivisions
     );
 
     // Bottom (-Y)
     AddSubdividedQuad(
-        [-w, -h, -d],
-        [ w, -h, -d],
-        [ w, -h,  d],
-        [-w, -h,  d],
+        [-w, -h,  d], // Top-left
+        [-w, -h, -d], // Bottom-left
+        [ w, -h, -d], // Bottom-right
+        [ w, -h,  d], // Top-right
         colors[3],
         subdivisions
     );
 
     // Right (+X)
     AddSubdividedQuad(
-        [ w, -h,  d],
-        [ w, -h, -d],
-        [ w,  h, -d],
-        [ w,  h,  d],
+        [w,  h,  d],    // Top-left
+        [w, -h,  d],   // Bottom-left
+        [w, -h, -d],  // Bottom-right
+        [w,  h, -d],   // Top-right
         colors[4],
         subdivisions
     );
 
     // Left (-X)
     AddSubdividedQuad(
-        [-w, -h, -d],
-        [-w, -h,  d],
-        [-w,  h,  d],
-        [-w,  h, -d],
+        [-w,  h, -d], // Top-left
+        [-w, -h, -d], // Bottom-left
+        [-w, -h,  d], // Bottom-right
+        [-w,  h,  d], // Top-right
         colors[5],
         subdivisions
     );
