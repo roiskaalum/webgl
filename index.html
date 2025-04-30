@@ -18,6 +18,7 @@
                 <option selected>Triangle</option>
                 <option>Quad</option>
                 <option>Cube</option>
+                <option>Cylinder</option> <!-- Added Cylinder option -->
             </select>
         </div>
         <div id="ui" class="geomtry-ui">Generate UI for geomtry here!</div>
@@ -39,6 +40,9 @@
         </div>
         <div class="texture-container">
             <input type="checkbox" id="texture" onchange="Update();"><span>Show Texture</span>
+        </div>
+        <div class="light-container">
+            <input type="color" id="l" value="#f6b73c" onchange="Update();"><span>Light Color</span>
         </div>
         <div class="colors-container" id="colors-container"></div>
         <div class="editing-container">

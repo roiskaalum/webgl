@@ -72,9 +72,12 @@ function InitHTMLShaders()
 attribute vec3 Pos;
 attribute vec3 Color;
 attribute vec2 UV;
+attribute vec3 Normal;
 uniform vec4 Angle;
 varying vec3 vertexColor;
 varying vec2 uv;
+varying vec3 normal;
+
 void main()
 {
     float coX = cos(Angle.x);
@@ -93,6 +96,8 @@ void main()
     gl_Position = matY * matX * vec4(Pos, 1.0);
     vertexColor = Color;
     uv = UV;
+    mat3 normalMatrix = mat3(matY * matX);
+    normal = normalize(normalMatrix * Normal);
 }`;
 
     //Fragment Shader Content:
@@ -102,12 +107,16 @@ uniform sampler2D Texture;
 uniform vec4 Display;
 varying vec3 vertexColor;
 varying vec2 uv;
+varying vec3 normal;
 void main()
 {
+    vec3 lightDirection = vec3(0.0, 0.0, 1.0);
+    float lambert = max(dot(normalize(lightDirection), normalize(normal)), 0.0);
+    vec3 shade = Display.rgb * lambert;
     float p = abs(Display.w);
     vec3 texture = texture2D(Texture, uv).rgb;
     vec3 color = vertexColor;
-    gl_FragColor = vec4(mix(color, texture, p), 1.0);
+    gl_FragColor = vec4(mix(color, texture, p) * shade, 1.0);
 }`;
 }
 
@@ -216,57 +225,77 @@ function CreateGeometryUI() {
     const h = eh ? eh.value : 1.0;
     const ed = document.getElementById("d");
     const d = ed ? ed.value : 1.0;
+    const er = document.getElementById("r");
+    const r = er ? er.value : 0.5;
     let e = document.getElementById('shape');
 
     const subdivisionOptions = document.getElementsByClassName("subdivision-options")[0];
-    if(!subdivisionOptions.classList.contains("hidden"))
-    {
+    if (!subdivisionOptions.classList.contains("hidden")) {
         subdivisionOptions.classList.add("hidden");
     }
-    
-    switch(e.selectedIndex)
-    {
-        case 0:
+
+    let html = "";
+
+    switch (e.selectedIndex) {
+        case 0: // Triangle
             CreateColorElements(3);
             colors = GetRGBValuesFromHTMLByClassName("color", 3);
             CreateTriangle(w, h, colors);
+            html = `
+                <div class="geometry-ui-item">
+                    <label>Width: </label><input type="number" id="w" value="${w}" onchange="InitShaders();">
+                </div>
+                <div class="geometry-ui-item">
+                    <label>Height: </label><input type="number" id="h" value="${h}" onchange="InitShaders();">
+                </div>
+            `;
             break;
-        case 1:
+        case 1: // Quad
             CreateColorElements(4);
             colors = GetRGBValuesFromHTMLByClassName("color", 4);
             CreateQuad(w, h, colors);
+            html = `
+                <div class="geometry-ui-item">
+                    <label>Width: </label><input type="number" id="w" value="${w}" onchange="InitShaders();">
+                </div>
+                <div class="geometry-ui-item">
+                    <label>Height: </label><input type="number" id="h" value="${h}" onchange="InitShaders();">
+                </div>
+            `;
             break;
-        case 2:
+        case 2: // Cube
             CreateColorElements(6);
             colors = GetRGBValuesFromHTMLByClassName("color", 6);
             CreateCube(w, h, d, colors);
+            html = `
+                <div class="geometry-ui-item">
+                    <label>Width: </label><input type="number" id="w" value="${w}" onchange="InitShaders();">
+                </div>
+                <div class="geometry-ui-item">
+                    <label>Height: </label><input type="number" id="h" value="${h}" onchange="InitShaders();">
+                </div>
+                <div class="geometry-ui-item">
+                    <label>Depth: </label><input type="number" id="d" value="${d}" onchange="InitShaders();">
+                </div>
+            `;
             subdivisionOptions.classList.remove("hidden");
-            subdivisionOptions.children[0].classList.remove("hidden");
-            if(document.getElementById("subdivision-checkbox").checked)
-                subdivisionOptions.children[1].classList.remove("hidden");
-            else
-                subdivisionOptions.children[1].classList.add("hidden");
+            break;
+        case 3: // Cylinder
+            CreateColorElements(4);
+            colors = GetRGBValuesFromHTMLByClassName("color", 4);
+            CreateCylinder(r, h, colors);
+            html = `
+                <div class="geometry-ui-item">
+                    <label>Radius: </label><input type="number" id="r" value="${r}" onchange="InitShaders();">
+                </div>
+                <div class="geometry-ui-item">
+                    <label>Height: </label><input type="number" id="h" value="${h}" onchange="InitShaders();">
+                </div>
+            `;
+            subdivisionOptions.classList.remove("hidden");
             break;
     }
-    
 
-    let html = `
-    <div class="geometry-ui-item">
-        <label>Width: </label><input type="number" id="w" value = "${w}" onchange="InitShaders();">
-    </div>
-    <div class="geometry-ui-item">
-        <label>Height: </label><input type="number" id="h" value = "${h}" onchange="InitShaders();">
-    </div>
-    `;
-    if(e.selectedIndex == 2)
-    {
-        html += `
-            <div class="geometry-ui-item">
-                <label>Depth: </label>
-                <input type="number" id="d" value = "${d}" onchange="InitShaders();">
-            </div>
-        `;
-    }
     document.getElementById("ui").innerHTML = html;
 }
 
@@ -274,22 +303,27 @@ function CreateVBO(program, vert)
 {
     let vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER,vert,gl.STATIC_DRAW);
-    const s = 8 * Float32Array.BYTES_PER_ELEMENT;
+    gl.bufferData(gl.ARRAY_BUFFER, vert, gl.STATIC_DRAW);
+    const s = 11 * Float32Array.BYTES_PER_ELEMENT; // Updated stride
 
     let p = gl.getAttribLocation(program, 'Pos');
-    gl.vertexAttribPointer(p,3,gl.FLOAT,gl.FALSE,s,0);
+    gl.vertexAttribPointer(p, 3, gl.FLOAT, gl.FALSE, s, 0);
     gl.enableVertexAttribArray(p);
 
     const o = 3 * Float32Array.BYTES_PER_ELEMENT;
     let c = gl.getAttribLocation(program, 'Color');
-    gl.vertexAttribPointer(c,3,gl.FLOAT,gl.FALSE,s,o);
+    gl.vertexAttribPointer(c, 3, gl.FLOAT, gl.FALSE, s, o);
     gl.enableVertexAttribArray(c);
 
-    const o2 = o * 2;
+    const o2 = o + 3 * Float32Array.BYTES_PER_ELEMENT;
     let u = gl.getAttribLocation(program, 'UV');
-    gl.vertexAttribPointer(u,2,gl.FLOAT,gl.FALSE,s,o2);
+    gl.vertexAttribPointer(u, 2, gl.FLOAT, gl.FALSE, s, o2);
     gl.enableVertexAttribArray(u);
+
+    const o3 = o2 + 2 * Float32Array.BYTES_PER_ELEMENT;
+    let n = gl.getAttribLocation(program, 'Normal');
+    gl.vertexAttribPointer(n, 3, gl.FLOAT, gl.FALSE, s, o3);
+    gl.enableVertexAttribArray(n);
 }
 
 function Render()
@@ -297,16 +331,16 @@ function Render()
     gl.clearColor(0.0, 0.4, 0.6, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT |
              gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 11);
 }
 
 
 // #region Add...
 
-function AddVertex(x, y, z, r, g, b, u, v)
+function AddVertex(x, y, z, r, g, b, u, v, nx, ny, nz)
 {
     const index = vertices.length;
-    vertices.length += 8;
+    vertices.length += 11;
     vertices[index + 0] = x;
     vertices[index + 1] = y;
     vertices[index + 2] = z;
@@ -315,15 +349,24 @@ function AddVertex(x, y, z, r, g, b, u, v)
     vertices[index + 5] = b;
     vertices[index + 6] = u;
     vertices[index + 7] = v;
+    vertices[index + 8] = nx;
+    vertices[index + 9] = ny;
+    vertices[index + 10]= nz;
 }
 
 function AddTriangle(x1, y1, z1, r1, g1, b1, u1, v1,
                      x2, y2, z2, r2, g2, b2, u2, v2,
-                     x3, y3, z3, r3, g3, b3, u3, v3)
+                     x3, y3, z3, r3, g3, b3, u3, v3, normal)
 {
-    AddVertex(x1, y1, z1, r1, g1, b1, u1, v1);
-    AddVertex(x2, y2, z2, r2, g2, b2, u2, v2);
-    AddVertex(x3, y3, z3, r3, g3, b3, u3, v3);
+    console.log("AddTriangle:", {
+        vertex1: { position: [x1, y1, z1], color: [r1, g1, b1], uv: [u1, v1], normal },
+        vertex2: { position: [x2, y2, z2], color: [r2, g2, b2], uv: [u2, v2], normal },
+        vertex3: { position: [x3, y3, z3], color: [r3, g3, b3], uv: [u3, v3], normal }
+    });
+    // Add vertices with normals
+    AddVertex(x1, y1, z1, r1, g1, b1, u1, v1, normal[0], normal[1], normal[2]);
+    AddVertex(x2, y2, z2, r2, g2, b2, u2, v2, normal[0], normal[1], normal[2]);
+    AddVertex(x3, y3, z3, r3, g3, b3, u3, v3, normal[0], normal[1], normal[2]);
 }
 
 function AddQuad(x1, y1, z1, r1, g1, b1, u1, v1,
@@ -331,13 +374,30 @@ function AddQuad(x1, y1, z1, r1, g1, b1, u1, v1,
                  x3, y3, z3, r3, g3, b3, u3, v3,
                  x4, y4, z4, r4, g4, b4, u4, v4)
 {
+    // Calculate edges
+    const edge1 = [x2 - x1, y2 - y1, z2 - z1];
+    const edge2 = [x4 - x1, y4 - y1, z4 - z1];
+
+    // Calculate normal
+    const normal = [
+        edge1[1] * edge2[2] - edge1[2] * edge2[1],
+        edge1[2] * edge2[0] - edge1[0] * edge2[2],
+        edge1[0] * edge2[1] - edge1[1] * edge2[0]
+    ];
+
+    // Normalize the normal
+    const length = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
+    normal[0] /= length;
+    normal[1] /= length;
+    normal[2] /= length;
+
     AddTriangle(x1, y1, z1, r1, g1, b1, u1, v1,
                 x2, y2, z2, r2, g2, b2, u2, v2,
-                x3, y3, z3, r3, g3, b3, u3, v3);
+                x3, y3, z3, r3, g3, b3, u3, v3, normal);
 
     AddTriangle(x3, y3, z3, r3, g3, b3, u3, v3,
                 x4, y4, z4, r4, g4, b4, u4, v4,
-                x1, y1, z1, r1, g1, b1, u1, v1);
+                x1, y1, z1, r1, g1, b1, u1, v1, normal);
 }
 
 function AddSubdividedQuad(v1, v2, v3, v4, baseColor, divisions = 1) {
@@ -346,8 +406,8 @@ function AddSubdividedQuad(v1, v2, v3, v4, baseColor, divisions = 1) {
 
     const quadCenter = [
         (v1[0] + v2[0] + v3[0] + v4[0]) / 4,
-        (v1[1] + v2[1] + v3[1] + v4[1]) / 4,
-        (v1[2] + v2[2] + v3[2] + v4[2]) / 4
+        (v1[1] + v2[1] + v3[1]) / 4,
+        (v1[2] + v2[2] + v3[2]) / 4
     ];
 
     for (let i = 0; i < divisions; i++) {
@@ -429,10 +489,15 @@ function AddSubdividedQuad(v1, v2, v3, v4, baseColor, divisions = 1) {
             }
             // Calculate UV coordinates for the sub-quad.
 
-            const uStart = j / divisions;
-            const uEnd = (j + 1) / divisions;
-            const vStart = (divisions - i) / divisions; // Top edge
-            const vEnd = (divisions - (i + 1)) / divisions; // Bottom edge
+            // const uStart = j / divisions;
+            // const uEnd = (j + 1) / divisions;
+            // const vStart = (divisions - i) / divisions; // Top edge
+            // const vEnd = (divisions - (i + 1)) / divisions; // Bottom edge
+
+            const uStart = ti0;
+            const uEnd = ti1;
+            const vStart = 1.0 - tj0; // Top edge
+            const vEnd = 1.0 - tj1; // Bottom edge
 
             AddQuad(
                 p1[0], p1[1], p1[2], ...color, uStart, vStart,
@@ -474,7 +539,7 @@ function CreateTriangle(width, height, colors)
     const h = height * 0.5;
     AddTriangle(0.0,  h, 0.0, ...colors[0], 0.5, 1.0,
                  -w, -h, 0.0, ...colors[1], 0.0, 0.0,
-                  w, -h, 0.0, ...colors[2], 1.0, 0.0);
+                  w, -h, 0.0, ...colors[2], 1.0, 0.0, [0.0, 0.0, 1.0]);
 }
 
 function CreateQuad(width, height, colors)
@@ -539,10 +604,10 @@ function CreateCube(width, height, depth, colors) {
 
     // Right (+X)
     AddSubdividedQuad(
-        [w,  h,  d],    // Top-left
-        [w, -h,  d],   // Bottom-left
-        [w, -h, -d],  // Bottom-right
-        [w,  h, -d],   // Top-right
+        [w,  h,  d], // Top-left
+        [w, -h,  d], // Bottom-left
+        [w, -h, -d], // Bottom-right
+        [w,  h, -d], // Top-right
         colors[4],
         subdivisions
     );
@@ -556,6 +621,80 @@ function CreateCube(width, height, depth, colors) {
         colors[5],
         subdivisions
     );
+}
+
+function CreateCylinder(radius, height, colors) {
+    vertices.length = 0;
+    const subdivisions = document.getElementById("subdivision-checkbox").checked
+        ? parseInt(document.getElementById("subdivision-level")?.value || "1")
+        : 1;
+
+    const segments = Math.max(3, subdivisions * 6); // Minimum 3 segments for a cylinder
+    const halfHeight = height * 0.5;
+
+    // Generate top and bottom circle center points
+    const topCenter = [0, halfHeight, 0];
+    const bottomCenter = [0, -halfHeight, 0];
+
+    const angleStep = (2 * Math.PI) / segments;
+
+    const topVertices = [];
+    const bottomVertices = [];
+
+    for (let i = 0; i < segments; i++) {
+        const angle = i * angleStep;
+        const x = radius * Math.cos(angle);
+        const z = radius * Math.sin(angle);
+
+        topVertices.push([x, halfHeight, z]);
+        bottomVertices.push([x, -halfHeight, z]);
+    }
+
+    // Add side faces and reuse vertices for top and bottom faces
+    for (let i = 0; i < segments; i++) {
+        const next = (i + 1) % segments; // Wrap around to the first vertex after the last
+
+        // Ensure consistent UV mapping for the first and last segments
+        const uStart = i / segments;
+        const uEnd = next / segments;
+
+        // Precompute trigonometric values for reuse
+        const cosCurrent = Math.cos(i * angleStep);
+        const sinCurrent = Math.sin(i * angleStep);
+        const cosNext = Math.cos(next * angleStep);
+        const sinNext = Math.sin(next * angleStep);
+
+        // Precompute UV coordinates for reuse
+        const uCurrent = 0.5 + 0.5 * cosCurrent;
+        const vCurrent = 0.5 + 0.5 * sinCurrent;
+        const uNext = 0.5 + 0.5 * cosNext;
+        const vNext = 0.5 + 0.5 * sinNext;
+
+
+        // Add side face
+        AddQuad(
+            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[2], uStart, 1.0, // Top-left
+            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[3], uStart, 0.0, // Bottom-left
+            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[3], uEnd, 0.0, // Bottom-right
+            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[2], uEnd, 1.0 // Top-right
+        );
+
+        // Add top face triangle
+        AddTriangle(
+            0, halfHeight, 0, ...colors[0], 0.5, 0.5, // Center vertex
+            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[0], uCurrent, vCurrent, // Current vertex
+            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[0], uNext, vNext,
+            [0.0, -1.0, 0.0] // Next vertex
+        );
+
+        // Add bottom face triangle
+        AddTriangle(
+            0, -halfHeight, 0, ...colors[1], 0.5, 0.5, // Center vertex
+            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[1], uNext, vNext, // Next vertex
+            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[1], uCurrent, vCurrent,
+            [0.0, 1,0, 0.0] // Current vertex
+        );
+    }
 }
 
 //#endregion Create Geometry
@@ -759,6 +898,11 @@ function Update()
 {
     const t = document.getElementById('texture');
     display[3] = t.checked ? 1.0 : 0.0;
+
+    const l = document.getElementById('l').value;
+    display[0] = parseInt(l.substring(1,3),16) / 255.0;
+    display[1] = parseInt(l.substring(3,5),16) / 255.0;
+    display[2] = parseInt(l.substring(5,7),16) / 255.0;
 
     gl.uniform4fv(displayGL, new Float32Array(display));
     Render();
