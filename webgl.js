@@ -358,13 +358,13 @@ function AddTriangle(x1, y1, z1, r1, g1, b1, u1, v1,
                      x2, y2, z2, r2, g2, b2, u2, v2,
                      x3, y3, z3, r3, g3, b3, u3, v3, normal)
 {
-    console.log("AddTriangle:", {
-        vertex1: { position: [x1, y1, z1], color: [r1, g1, b1], uv: [u1, v1], normal },
-        vertex2: { position: [x2, y2, z2], color: [r2, g2, b2], uv: [u2, v2], normal },
-        vertex3: { position: [x3, y3, z3], color: [r3, g3, b3], uv: [u3, v3], normal }
-    });
+    // console.log("AddTriangle:", {
+    //     vertex1: { position: [x1, y1, z1], color: [r1, g1, b1], uv: [u1, v1], normal },
+    //     vertex2: { position: [x2, y2, z2], color: [r2, g2, b2], uv: [u2, v2], normal },
+    //     vertex3: { position: [x3, y3, z3], color: [r3, g3, b3], uv: [u3, v3], normal }
+    // });
     // Add vertices with normals
-    AddVertex(x1, y1, z1, r1, g1, b1, u1, v1, normal[0], normal[1], normal[2]);
+    AddVertex(x1, y1, z1, r1, g1, b1, u1, v1, ...normal);
     AddVertex(x2, y2, z2, r2, g2, b2, u2, v2, normal[0], normal[1], normal[2]);
     AddVertex(x3, y3, z3, r3, g3, b3, u3, v3, normal[0], normal[1], normal[2]);
 }
@@ -632,10 +632,6 @@ function CreateCylinder(radius, height, colors) {
     const segments = Math.max(3, subdivisions * 6); // Minimum 3 segments for a cylinder
     const halfHeight = height * 0.5;
 
-    // Generate top and bottom circle center points
-    const topCenter = [0, halfHeight, 0];
-    const bottomCenter = [0, -halfHeight, 0];
-
     const angleStep = (2 * Math.PI) / segments;
 
     const topVertices = [];
@@ -651,25 +647,38 @@ function CreateCylinder(radius, height, colors) {
     }
 
     // Add side faces and reuse vertices for top and bottom faces
-    for (let i = 0; i < segments; i++) {
-        const next = (i + 1) % segments; // Wrap around to the first vertex after the last
+    for (let i = segments - 1; i >= 0; i--) {
+        const next = (i - 1 + segments) % segments; // Wrap around to the last vertex before the first
 
-        // Ensure consistent UV mapping for the first and last segments
-        const uStart = i / segments;
-        const uEnd = next / segments;
+        // Calculate UV coordinates for the current and next segments
+        let uStart = i / segments; // Proportional UV for the current segment
+        let uEnd = next / segments; // Proportional UV for the next segment
 
-        // Precompute trigonometric values for reuse
-        const cosCurrent = Math.cos(i * angleStep);
-        const sinCurrent = Math.sin(i * angleStep);
-        const cosNext = Math.cos(next * angleStep);
-        const sinNext = Math.sin(next * angleStep);
+        // Fix overlapping UV coordinates for the last quad
+        if (i === 0) {
+            console.log("uEnd: " + uEnd);
+            uStart = uEnd;
+            uEnd = 1.0;
+            // uEnd = 1.0; // Wrap the last quad's uEnd to 0.0
+        }
+        else
+        {
+            // Invert UV coordinates horizontally
+            uStart = 1.0 - uStart;
+            uEnd = 1.0 - uEnd;
 
-        // Precompute UV coordinates for reuse
-        const uCurrent = 0.5 + 0.5 * cosCurrent;
-        const vCurrent = 0.5 + 0.5 * sinCurrent;
-        const uNext = 0.5 + 0.5 * cosNext;
-        const vNext = 0.5 + 0.5 * sinNext;
+        }
 
+
+        // Log UV values and vertices for debugging
+        console.log(
+            `Quad ${segments - i}:`,
+            `uStart=${uStart.toFixed(2)}, uEnd=${uEnd.toFixed(2)}`,
+            `Top-Left: (${topVertices[i][0].toFixed(2)}, ${topVertices[i][1].toFixed(2)}, ${topVertices[i][2].toFixed(2)})`,
+            `Bottom-Left: (${bottomVertices[i][0].toFixed(2)}, ${bottomVertices[i][1].toFixed(2)}, ${bottomVertices[i][2].toFixed(2)})`,
+            `Bottom-Right: (${bottomVertices[next][0].toFixed(2)}, ${bottomVertices[next][1].toFixed(2)}, ${bottomVertices[next][2].toFixed(2)})`,
+            `Top-Right: (${topVertices[next][0].toFixed(2)}, ${topVertices[next][1].toFixed(2)}, ${topVertices[next][2].toFixed(2)})`
+        );
 
         // Add side face
         AddQuad(
@@ -682,17 +691,17 @@ function CreateCylinder(radius, height, colors) {
         // Add top face triangle
         AddTriangle(
             0, halfHeight, 0, ...colors[0], 0.5, 0.5, // Center vertex
-            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[0], uCurrent, vCurrent, // Current vertex
-            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[0], uNext, vNext,
-            [0.0, -1.0, 0.0] // Next vertex
+            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[0], 0.5 + 0.5 * Math.cos(i * angleStep), 0.5 + 0.5 * Math.sin(i * angleStep),
+            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[0], 0.5 + 0.5 * Math.cos(next * angleStep), 0.5 + 0.5 * Math.sin(next * angleStep),
+            [0.0, 1.0, 0.0] // Normal
         );
 
         // Add bottom face triangle
         AddTriangle(
             0, -halfHeight, 0, ...colors[1], 0.5, 0.5, // Center vertex
-            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[1], uNext, vNext, // Next vertex
-            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[1], uCurrent, vCurrent,
-            [0.0, 1,0, 0.0] // Current vertex
+            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[1], 0.5 + 0.5 * Math.cos(next * angleStep), 0.5 + 0.5 * Math.sin(next * angleStep),
+            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[1], 0.5 + 0.5 * Math.cos(i * angleStep), 0.5 + 0.5 * Math.sin(i * angleStep),
+            [0.0, -1.0, 0.0] // Normal
         );
     }
 }
