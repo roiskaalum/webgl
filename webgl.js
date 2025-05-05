@@ -657,8 +657,8 @@ function CreateCylinder(radius, height, colors) {
         // Fix overlapping UV coordinates for the last quad
         if (i === 0) {
             console.log("uEnd: " + uEnd);
-            uStart = uEnd;
-            uEnd = 1.0;
+            uEnd = 1.0-uEnd;
+            uStart = 0.0;
             // uEnd = 1.0; // Wrap the last quad's uEnd to 0.0
         }
         else
@@ -689,18 +689,26 @@ function CreateCylinder(radius, height, colors) {
         );
 
         // Add top face triangle
+        const centerU = 0.5; // Center of the texture
+        const centerV = 0.5; // Center of the texture
+        const currentU = 0.5 + 0.5 * Math.cos(i * angleStep); // Current vertex U
+        const currentV = 0.5 + 0.5 * Math.sin(i * angleStep); // Current vertex V
+        const nextU = 0.5 + 0.5 * Math.cos(next * angleStep); // Next vertex U
+        const nextV = 0.5 + 0.5 * Math.sin(next * angleStep); // Next vertex V
+
         AddTriangle(
-            0, halfHeight, 0, ...colors[0], 0.5, 0.5, // Center vertex
-            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[0], 0.5 + 0.5 * Math.cos(i * angleStep), 0.5 + 0.5 * Math.sin(i * angleStep),
-            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[0], 0.5 + 0.5 * Math.cos(next * angleStep), 0.5 + 0.5 * Math.sin(next * angleStep),
+            0, halfHeight, 0, ...colors[0], centerU, centerV, // Center vertex
+            topVertices[i][0], topVertices[i][1], topVertices[i][2], ...colors[0], currentU, 1.0 - currentV, // Current vertex
+            topVertices[next][0], topVertices[next][1], topVertices[next][2], ...colors[0], nextU, 1.0 - nextV, // Next vertex
             [0.0, 1.0, 0.0] // Normal
         );
 
         // Add bottom face triangle
+
         AddTriangle(
-            0, -halfHeight, 0, ...colors[1], 0.5, 0.5, // Center vertex
-            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[1], 0.5 + 0.5 * Math.cos(next * angleStep), 0.5 + 0.5 * Math.sin(next * angleStep),
-            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[1], 0.5 + 0.5 * Math.cos(i * angleStep), 0.5 + 0.5 * Math.sin(i * angleStep),
+            0, -halfHeight, 0, ...colors[1], centerU, centerV, // Center vertex
+            bottomVertices[next][0], bottomVertices[next][1], bottomVertices[next][2], ...colors[1], nextU, nextV, // Next vertex
+            bottomVertices[i][0], bottomVertices[i][1], bottomVertices[i][2], ...colors[1], currentU, currentV, // Current vertex
             [0.0, -1.0, 0.0] // Normal
         );
     }
