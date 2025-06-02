@@ -8,6 +8,18 @@ var mouseX = 0, mouseY = 0;
 var angle = [0.0, 0.0, 0.0, 1.0];
 var angleGL = 0;
 
+var proGL = 0; //Uniform Location
+var projection = [  0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0];
+var modGL = 0; //Uniform Location
+
+var modelView = [   1.0,  0.0,  0.0,  0.0,
+                    0.0,  1.0,  0.0,  0.0,
+                    0.0,  0.0,  1.0,  0.0,
+                    0.0,  0.0, -1.2,  1.0];
+
 var geometry =
 {
     vertices: [],
@@ -74,6 +86,8 @@ attribute vec3 Color;
 attribute vec2 UV;
 attribute vec3 Normal;
 uniform vec4 Angle;
+uniform mat4 Projection;
+uniform mat4 ModelView;
 varying vec3 vertexColor;
 varying vec2 uv;
 varying vec3 normal;
@@ -92,8 +106,16 @@ void main()
                         vec4(0.0, 1.0,  0.0, 0.0),
                         vec4(siY, 0.0,  coY, 0.0),
                         vec4(0.0, 0.0,  0.0, 1.0));
-
-    gl_Position = matY * matX * vec4(Pos, 1.0);
+    float coZ = cos(Pos.y + 0.5);
+    float siZ = sin(Pos.y + 0.5);
+    mat4 bend = mat4(vec4(coZ, siZ, 0.0, 0.0),
+                     vec4(-siZ, coZ, 0.0, 0.0),
+                     vec4(0.0, 0.0, 1.0, 0.0),
+                     vec4(0.0, 0.0, 0.0, 1.0));
+    vec4 v = bend * vec4(Pos, 1.0);
+    mat4 rot = matY * matX;
+    vec4 pos = bend * rot * vec4(Pos, 1.0);
+    gl_Position = Projection * ModelView * pos;
     vertexColor = Color;
     uv = UV;
     mat3 normalMatrix = mat3(matY * matX);
@@ -207,7 +229,8 @@ function CreateGeometryBuffers(program)
     CreateVBO(program, new Float32Array(vertices))
 
     angleGL = gl.getUniformLocation(program, 'Angle');
-
+    proGL = gl.getUniformLocation(program, 'Projection');
+    modGL = gl.getUniformLocation(program, 'ModelView');
     CreateTexture(program, 'img/texture.png');
 
     gl.useProgram(program);
@@ -329,8 +352,17 @@ function CreateVBO(program, vert)
 function Render()
 {
     gl.clearColor(0.0, 0.4, 0.6, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT |
-             gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Dolly Zoom
+    const zoom = document.getElementById('zoom').value;
+    modelView[14] = -zoom;
+    // Perspective Projection
+    const fov = document.getElementById('fov').value;
+    const aspect = gl.canvas.width / gl.canvas.height;
+    Perspective(fov, aspect, 1.0, 2000.0, projection);
+
+    // Draw Geometry
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 11);
 }
 
@@ -899,6 +931,22 @@ function SetTextureFilters(image)
 function IsPow2(value)
 {
     return (value & (value - 1)) === 0;
+}
+
+function Perspective(fovy, aspect, near, far, matrix)
+{
+    // Fill array with zeros
+    matrix.fill(0);
+    // Focal length
+    const f = 1/Math.tan(fovy * Math.PI / 360.0);
+    // Setup matrix
+    matrix[0] = f / aspect;
+    matrix[5] = f;
+    matrix[10] = (far + near) / (near - far);
+    matrix[11] = -1;
+    matrix[14] = (2 * far * near) / (near - far);
+    gl.uniformMatrix4fv(proGL, false, new Float32Array(projection));
+    gl.uniformMatrix4fv(modGL, false, new Float32Array(modelView));
 }
 
 function Update()
